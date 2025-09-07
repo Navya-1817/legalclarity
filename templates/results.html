@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ get_translation('document_analysis') }} - {{ get_translation('app_title') }}{% endblock %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4 sm:p-8">
+    <div class="w-full max-w-4xl bg-white rounded-xl border border-gray-200 shadow-sm p-6 sm:p-10">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-900">{{ get_translation('document_analysis') }}</h1>
+            <p class="text-gray-500 mt-1">{{ get_translation('important_clauses') }}</p>
+        </div>
+        
+        {% if analysis_data and analysis_data.summary %}
+        <div class="mb-6 bg-gray-50 p-4 border border-gray-200 rounded-md">
+            <div class="flex justify-between items-start">
+                <h2 class="text-xl font-semibold text-gray-800">{{ get_translation('summary') }}</h2>
+                <button id="listen-button" class="flex items-center space-x-1 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m0 0l-2.828 2.828m2.828-2.828a4 4 0 01-1.414-1.414"></path>
+                    </svg>
+                    <span>{{ get_translation('listen') }}</span>
+                </button>
+            </div>
+            <p id="summary-text" class="mt-2 text-gray-700">{{ analysis_data.summary }}</p>
+            <audio id="audio-player" class="w-full mt-4 hidden" controls></audio>
+        </div>
+        {% endif %}
+        
+        <div id="document-viewer" class="prose max-w-none p-4 border border-gray-200 rounded-md bg-gray-50 whitespace-pre-wrap leading-relaxed">
+            <p class="text-center text-gray-500">Loading document...</p>
+        </div>
+        <div class="text-center mt-8">
+            <a href="{{ url_for('dashboard') }}" class="text-red-600 hover:underline">{{ get_translation('dashboard') }}</a>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // Document viewer functionality
+        const docViewer = document.getElementById('document-viewer');
+        const analysisData = {{ analysis_data | tojson }};
+        if (!analysisData || !analysisData.original_text) {
+            docViewer.innerHTML = '<p class="text-red-500 text-center">Could not load analysis. Please try again.</p>';
+            return;
+        }
+        const originalText = analysisData.original_text;
+        const annotations = analysisData.annotations || [];
+        const replacements = [];
+        annotations.forEach(annotation => {
+            const textToHighlight = annotation.text_to_highlight;
+            let startIndex = originalText.indexOf(textToHighlight);
+            while (startIndex !== -1) {
+                const endIndex = startIndex + textToHighlight.length;
+                replacements.push({ start: startIndex, end: endIndex, explanation: annotation.explanation, text: textToHighlight });
+                startIndex = originalText.indexOf(textToHighlight, startIndex + 1);
+            }
+        });
+        replacements.sort((a, b) => a.start - b.start);
+        let newHtml = '';
+        let lastIndex = 0;
+        replacements.forEach(rep => {
+            newHtml += originalText.substring(lastIndex, rep.start);
+            newHtml += `<mark>${rep.text}<span class="tooltip">${rep.explanation}</span></mark>`;
+            lastIndex = rep.end;
+        });
+        newHtml += originalText.substring(lastIndex);
+        docViewer.innerHTML = newHtml;
+        
+        // Text-to-speech functionality
+        const listenButton = document.getElementById('listen-button');
+        const audioPlayer = document.getElementById('audio-player');
+        const summaryText = document.getElementById('summary-text');
+        
+        if (listenButton && summaryText) {
+            listenButton.addEventListener('click', async function() {
+                try {
+                    // Change button appearance to indicate loading
+                    const originalButtonText = listenButton.innerHTML;
+                    listenButton.innerHTML = `
+                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Converting...
+                    `;
+                    listenButton.disabled = true;
+                    
+                    // Get summary text from the page
+                    const text = summaryText.textContent;
+                    
+                    // Call the text-to-speech API
+                    const response = await fetch('/text-to-speech', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: text }),
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to generate speech');
+                    }
+                    
+                    // Get the audio blob
+                    const audioBlob = await response.blob();
+                    
+                    // Create object URL for the audio player
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Set the source and display the audio player
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.classList.remove('hidden');
+                    
+                    // Play the audio automatically
+                    audioPlayer.play();
+                    
+                    // Reset button
+                    listenButton.innerHTML = originalButtonText;
+                    listenButton.disabled = false;
+                    
+                } catch (error) {
+                    console.error('Error in text-to-speech:', error);
+                    alert('Failed to convert text to speech. Please try again.');
+                    
+                    // Reset button on error
+                    listenButton.innerHTML = `
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m0 0l-2.828 2.828m2.828-2.828a4 4 0 01-1.414-1.414"></path>
+                        </svg>
+                        <span>{{ get_translation('listen') }}</span>
+                    `;
+                    listenButton.disabled = false;
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

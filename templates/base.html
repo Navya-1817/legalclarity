@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Legal Clarity{% endblock %}</title>
+    <!-- Replace Tailwind with direct CSS -->
+    <style>
+        /* Basic reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* Core layout */
+        body { 
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f9f9f9;
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        header {
+            background-color: #ffffff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            font-size: 22px;
+            font-weight: bold;
+            color: #e53e3e;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-links a {
+            color: #4a5568;
+            text-decoration: none;
+        }
+        
+        .nav-links a:hover {
+            color: #e53e3e;
+        }
+        
+        .register-btn {
+            border: 1px solid #e53e3e;
+            color: #e53e3e;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+        }
+        
+        .register-btn:hover {
+            background-color: #e53e3e;
+            color: white;
+        }
+        
+        /* Language switcher */
+        .language-switcher {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .language-switcher select {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 14px;
+        }
+        
+        .language-btn {
+            color: #4a5568;
+            text-decoration: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .language-btn:hover {
+            background-color: #f7fafc;
+        }
+        
+        .language-btn.active {
+            background-color: #e53e3e;
+            color: white;
+        }
+        
+        /* Messages */
+        .messages {
+            background-color: #ebf5ff;
+            border-left: 4px solid #3182ce;
+            padding: 15px;
+            margin: 15px auto;
+            max-width: 1200px;
+        }
+        
+        .messages p {
+            color: #2c5282;
+        }
+        
+        /* Main content */
+        main {
+            padding: 20px;
+        }
+        
+        /* Form elements */
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        button {
+            background-color: #e53e3e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #c53030;
+        }
+        
+        /* Utility classes */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <header>
+        <nav>
+            <div>
+                <h1>{{ get_translation('app_title') }}</h1>
+            </div>
+            <div class="nav-links">
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}">{{ get_translation('dashboard') }}</a>
+                <a href="{{ url_for('logout') }}" onclick="clearCache()">{{ get_translation('logout') }}</a>
+                {% else %}
+                <a href="{{ url_for('login') }}">{{ get_translation('login') }}</a>
+                <a href="{{ url_for('register') }}" class="register-btn">{{ get_translation('register') }}</a>
+                {% endif %}
+                
+                <!-- Language Switcher -->
+                <div class="language-switcher">
+                    <span style="font-size: 14px; color: #666;">{{ get_translation('language') }}:</span>
+                    {% for lang_code, lang_info in languages.items() %}
+                    <a href="{{ url_for('set_language', language=lang_code) }}" 
+                       class="language-btn {% if current_language == lang_code %}active{% endif %}">
+                        {{ lang_info.name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </nav>
+    </header>
+    
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <p>{{ message }}</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+    
+    <script>
+        function clearCache() {
+            // Clear any cached form data
+            if (typeof(Storage) !== "undefined") {
+                localStorage.clear();
+                sessionStorage.clear();
+            }
+            
+            // Clear any form data
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => form.reset());
+            
+            // Force reload after logout to ensure clean state
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 100);
+        }
+        
+        // Prevent back button after logout
+        if (window.location.pathname === '/login' || window.location.pathname === '/') {
+            window.history.pushState(null, null, window.location.href);
+            window.onpopstate = function() {
+                window.history.pushState(null, null, window.location.href);
+            };
+        }
+    </script>
+</body>
+</html>

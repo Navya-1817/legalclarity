@@ -1,0 +1,52 @@
+# Sensitive files - DO NOT commit to GitHub
+.env
+*.env
+.env.local
+.env.production
+
+# Google Cloud credentials
+service-account-key.json
+*.json
+gcp-credentials/
+
+# API keys and secrets
+secrets/
+config/secrets.py
+
+# Database files (for development)
+database.db
+*.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Uploads and temp files
+temp_uploads/
+uploads/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Build files
+build/
+dist/
+*.egg-info/
