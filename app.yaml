@@ -1,0 +1,9 @@
+runtime: python39
+
+env_variables:
+  FLASK_SECRET_KEY: "03728b70e22e821ffd0208bae0c80cc9534fe75ce67a5355b046e99dd086272e"
+  GCP_PROJECT_ID: "shining-sign-468814-i2"
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 10
