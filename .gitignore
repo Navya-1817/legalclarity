@@ -27,6 +27,7 @@ __pycache__/
 venv/
 env/
 .venv/
+.env/
 
 # Uploads and temp files
 temp_uploads/
