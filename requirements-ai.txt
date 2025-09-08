@@ -1,4 +1,0 @@
-# AI Service Dependencies
-
-# For Google Vertex AI (Gemini Pro)
-google-cloud-aiplatform==1.38.0

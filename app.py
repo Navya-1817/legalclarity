@@ -29,16 +29,25 @@ if not GCP_PROJECT_ID:
 
 # Initialize Vision API client
 try:
-    vision_client = vision.ImageAnnotatorClient()
+    # Check if we have service account JSON as environment variable
+    service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+    if service_account_info:
+        import json
+        from google.oauth2 import service_account
+        
+        # Parse the JSON string
+        service_account_dict = json.loads(service_account_info)
+        credentials = service_account.Credentials.from_service_account_info(service_account_dict)
+        
+        vision_client = vision.ImageAnnotatorClient(credentials=credentials)
+        tts_client = texttospeech.TextToSpeechClient(credentials=credentials)
+    else:
+        # Fall back to default credentials (service account file)
+        vision_client = vision.ImageAnnotatorClient()
+        tts_client = texttospeech.TextToSpeechClient()
 except Exception as e:
-    print(f"Warning: Google Cloud Vision API not configured properly: {e}")
+    print(f"Warning: Google Cloud APIs not configured properly: {e}")
     vision_client = None
-
-# Initialize Text-to-Speech client
-try:
-    tts_client = texttospeech.TextToSpeechClient()
-except Exception as e:
-    print(f"Warning: Google Cloud Text-to-Speech API not configured properly: {e}")
     tts_client = None
 # --- End AI Configuration ---
 
@@ -119,7 +128,7 @@ if not app.secret_key:
 # Create upload folder if it doesn't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-DATABASE = 'database.db'
+DATABASE = os.getenv('DATABASE_PATH', 'database.db')
 bcrypt = Bcrypt(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -230,7 +239,20 @@ def analyze_with_vertex_ai(document_text: str, language: str = 'en') -> dict:
         raise Exception("Google Cloud AI Platform not installed. Run: pip install google-cloud-aiplatform")
     
     try:
-        aiplatform.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
+        # Check if we have service account JSON as environment variable
+        service_account_info = os.getenv('GOOGLE_SERVICE_ACCOUNT_JSON')
+        if service_account_info:
+            import json
+            from google.oauth2 import service_account
+            
+            # Parse the JSON string
+            service_account_dict = json.loads(service_account_info)
+            credentials = service_account.Credentials.from_service_account_info(service_account_dict)
+            
+            aiplatform.init(project=GCP_PROJECT_ID, location=GCP_LOCATION, credentials=credentials)
+        else:
+            # Fall back to default credentials
+            aiplatform.init(project=GCP_PROJECT_ID, location=GCP_LOCATION)
     except Exception as e:
         raise Exception(f"Failed to initialize Vertex AI. Check GCP_PROJECT_ID: {str(e)}")
     

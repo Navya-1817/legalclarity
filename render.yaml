@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: legalclarity
+    env: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: GCP_PROJECT_ID
+        value: shining-sign-468814-i2
+      - key: MAX_CONTENT_LENGTH
+        value: "10485760"
+      - key: UPLOAD_FOLDER
+        value: temp_uploads
+      - key: DATABASE_PATH
+        value: database.db
